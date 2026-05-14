@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Editar participante{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card card-soft">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h3 class="mb-0">Editar participante</h3>
+            <small class="text-muted">Aquí puedes actualizar los datos del participante.</small>
+          </div>
+          <a href="{{ url_for('admin_panel') }}" class="btn btn-outline-secondary btn-sm">Volver</a>
+        </div>
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label">Nombre completo</label>
+            <input class="form-control name-only" name="full_name" value="{{ user.full_name }}" minlength="2" maxlength="80" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\'\- ]+" title="Solo letras y espacios. No uses números ni símbolos." required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Correo</label>
+            <input class="form-control" type="email" name="email" value="{{ user.email }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Nueva contraseña <span class="text-muted">(opcional)</span></label>
+            <input class="form-control" type="text" name="password" minlength="8" maxlength="30" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,30}" title="Debe tener mayúscula, minúscula, número y símbolo. Mínimo 8 caracteres." placeholder="Déjalo en blanco para no cambiarla"><div class="form-text">Si la cambias, usa mínimo 8 caracteres con mayúscula, minúscula, número y símbolo.</div>
+          </div>
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary">Guardar cambios</button>
+            <a href="{{ url_for('admin_panel') }}" class="btn btn-outline-secondary">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
