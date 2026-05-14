@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Editar partido{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card card-soft">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+          <div>
+            <h3 class="mb-1">Editar partido</h3>
+            <div class="mini-muted">Corrige equipos, fase, fecha, hora y estadio sin borrar el resto del sistema.</div>
+          </div>
+          <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin_panel', fecha=selected_date) }}">Volver</a>
+        </div>
+        {% if match.is_finished %}
+        <div class="alert alert-warning">Este partido ya tiene resultado. Si cambias equipos o fecha, lo recomendado es dejarlo abierto otra vez para cargar el marcador correcto.</div>
+        {% endif %}
+        <form method="post" action="{{ url_for('edit_match', match_id=match.id, fecha=selected_date) }}">
+          <div class="row g-3">
+            <div class="col-md-6"><label class="form-label">Fase</label><select class="form-select" name="phase" required>{% for p in ['Grupos','Dieciseisavos de final','Octavos de final','Cuartos de final','Semifinal','Tercer puesto','Final'] %}<option value="{{ p }}" {% if match.phase == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select></div>
+            <div class="col-md-6"><label class="form-label">Grupo / descripción</label><input class="form-control" name="group_name" value="{{ match.group_name or '' }}" placeholder="Grupo A / Clasificación manual"></div>
+            <div class="col-md-6"><label class="form-label">Fecha y hora</label><input class="form-control" type="datetime-local" name="match_datetime" value="{{ match.match_datetime_form }}" required></div>
+            <div class="col-md-6"><label class="form-label">Estadio</label><input class="form-control" name="stadium" value="{{ match.stadium or '' }}" placeholder="Por confirmar"></div>
+            <div class="col-md-6 team-picker" data-team-picker>
+              <label class="form-label">Equipo local</label>
+              <select class="form-select form-select-sm mb-2 team-select" name="home_team_select" aria-label="Seleccionar equipo local">
+                <option value="">Seleccionar país/equipo oficial</option>
+                {% for team in team_names %}<option value="{{ team }}" {% if team == match.home_team %}selected{% endif %}>{{ team }}</option>{% endfor %}
+              </select>
+              <input class="form-control team-input" name="home_team" list="teams-list" value="{{ match.home_team }}" required>
+              <small class="text-muted">Puedes elegir de la lista para asegurar bandera o escribir manualmente si necesitas corregir una fase.</small>
+            </div>
+            <div class="col-md-6 team-picker" data-team-picker>
+              <label class="form-label">Equipo visitante</label>
+              <select class="form-select form-select-sm mb-2 team-select" name="away_team_select" aria-label="Seleccionar equipo visitante">
+                <option value="">Seleccionar país/equipo oficial</option>
+                {% for team in team_names %}<option value="{{ team }}" {% if team == match.away_team %}selected{% endif %}>{{ team }}</option>{% endfor %}
+              </select>
+              <input class="form-control team-input" name="away_team" list="teams-list" value="{{ match.away_team }}" required>
+            </div>
+          </div>
+          <datalist id="teams-list">{% for team in team_names %}<option value="{{ team }}"></option>{% endfor %}</datalist>
+          {% if match.is_finished %}
+          <div class="form-check mt-3"><input class="form-check-input" type="checkbox" value="1" id="keep_result" name="keep_result"><label class="form-check-label" for="keep_result">Conservar el resultado actual. Úsalo solo si estás corrigiendo un texto menor.</label></div>
+          {% endif %}
+          <div class="d-flex gap-2 mt-4 flex-wrap"><button class="btn btn-success">Guardar cambios</button><a class="btn btn-outline-secondary" href="{{ url_for('admin_panel', fecha=selected_date) }}">Cancelar</a></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
