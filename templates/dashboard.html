@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% block title %}Mis pronósticos{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h2 class="mb-0">Mis pronósticos y puntos</h2>
+    <small class="text-muted">Participante: {{ user.full_name }}</small>
+  </div>
+  <div class="mini-muted">Los pronósticos se pueden guardar y corregir hasta 1 día antes de iniciar cada partido. Después quedan bloqueados para el participante.</div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-3 col-md-6">
+    <div class="card card-soft h-100 score-summary-card score-main">
+      <div class="card-body">
+        <div class="mini-muted text-white-50">Mi puntaje acumulado</div>
+        <div class="display-5 fw-bold text-white">{{ total_points }} pts</div>
+        <small class="text-white-50">Suma automática según resultados oficiales.</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="card card-soft h-100">
+      <div class="card-body">
+        <div class="mini-muted">Marcador exacto</div>
+        <div class="fs-3 fw-bold text-success">5 pts</div>
+        <small class="text-muted">Cuando tu marcador es igual al resultado oficial.</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="card card-soft h-100">
+      <div class="card-body">
+        <div class="mini-muted">Ganador o empate</div>
+        <div class="fs-3 fw-bold text-primary">3 pts</div>
+        <small class="text-muted">Cuando aciertas quién gana o que empatan.</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="card card-soft h-100">
+      <div class="card-body">
+        <div class="mini-muted">No acierta</div>
+        <div class="fs-3 fw-bold text-danger">-1 pt</div>
+        <small class="text-muted">Cuando no aciertas ni marcador exacto ni ganador/empate.</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="card card-soft mb-4" id="herramientas-pronosticos">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+      <div>
+        <h4 class="mb-1">⚽ Generar mis marcadores automáticamente</h4>
+      </div>
+      <form method="post" action="{{ url_for('random_predictions') }}" onsubmit="return confirm('Esto generará marcadores solo en partidos abiertos que todavía no tengan pronóstico guardado. ¿Deseas continuar?');">
+        <input type="hidden" name="fecha" value="{{ selected_date }}">
+        <button class="btn btn-success" type="submit">Generar mis marcadores</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="filter-bar mb-4">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label">Ver partidos por fecha</label>
+      <select name="fecha" class="form-select">
+        <option value="">Todas las fechas</option>
+        {% for d in available_dates %}
+        <option value="{{ d }}" {% if selected_date == d %}selected{% endif %}>{{ d|date_only }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-8 d-flex gap-2">
+      <button class="btn btn-primary">Filtrar</button>
+      <a class="btn btn-outline-secondary" href="{{ url_for('dashboard') }}">Limpiar</a>
+    </div>
+  </form>
+</div>
+
+
+
+
+
+<div class="card card-soft mb-4" id="tabla-grupos">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+      <div>
+        <h4 class="mb-0">📊 Tabla de grupos automática</h4>
+        <small class="text-muted">Clasificación visible para usuarios: puntos, partidos jugados, goles y diferencia.</small>
+      </div>
+      <span class="badge text-bg-success">Vista participante</span>
+    </div>
+    <div class="row g-3">
+      {% for group, rows in standings.items() %}
+      <div class="col-xl-4 col-lg-6">
+        <div class="card h-100 border-0 shadow-sm" style="border-radius:16px; overflow:hidden;">
+          <div class="card-header bg-dark text-white fw-bold">{{ group }}</div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead><tr><th>Equipo</th><th>PTS</th><th>PJ</th><th>GF</th><th>GC</th><th>DG</th></tr></thead>
+              <tbody>
+              {% for r in rows %}
+                <tr class="{% if loop.index <= 2 %}table-success{% elif loop.index == 3 %}table-warning{% endif %}">
+                  <td class="fw-semibold">{% if team_flag_url(r.team) %}<img src="{{ team_flag_url(r.team) }}" alt="{{ r.team }}" class="team-flag-img">{% else %}{{ team_flag(r.team) }}{% endif %} {{ r.team }}</td>
+                  <td class="fw-bold">{{ r.pts }}</td><td>{{ r.pj }}</td><td>{{ r.gf }}</td><td>{{ r.gc }}</td><td>{{ r.gd }}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+<div class="card card-soft mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+      <div>
+        <h4 class="mb-0">🏆 Eliminatorias del Mundial</h4>
+        <small class="text-muted">Cuando el administrador cree las fases siguientes, aparecerán aquí igual que los partidos normales.</small>
+      </div>
+      <span class="badge text-bg-dark">Vista usuario</span>
+    </div>
+    <div class="row g-3">
+      {% set ns = namespace(has_bracket=false) %}
+      {% for phase, rows in bracket_data.items() %}
+        {% if rows %}
+          {% set ns.has_bracket = true %}
+          <div class="col-12">
+            <h5 class="fw-bold mb-2">{{ phase }}</h5>
+          </div>
+          {% for bm in rows %}
+          <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card h-100 border-0 shadow-sm" style="border-radius:16px;">
+              <div class="card-body">
+                <div class="mini-muted mb-2">{{ bm.match_datetime|dt }}</div>
+                <div class="d-flex justify-content-between align-items-center fw-semibold {% if bm.winner_team == bm.home_team %}text-success{% endif %}">
+                  <span>{% if team_flag_url(bm.home_team) %}<img src="{{ team_flag_url(bm.home_team) }}" alt="{{ bm.home_team }}" class="team-flag-img">{% else %}{{ team_flag(bm.home_team) }}{% endif %} {{ bm.home_team }}</span>
+                  <span>{% if bm.is_finished %}{{ score_with_penalties(bm, 'home') }}{% else %}-{% endif %}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center fw-semibold {% if bm.winner_team == bm.away_team %}text-success{% endif %}">
+                  <span>{% if team_flag_url(bm.away_team) %}<img src="{{ team_flag_url(bm.away_team) }}" alt="{{ bm.away_team }}" class="team-flag-img">{% else %}{{ team_flag(bm.away_team) }}{% endif %} {{ bm.away_team }}</span>
+                  <span>{% if bm.is_finished %}{{ score_with_penalties(bm, 'away') }}{% else %}-{% endif %}</span>
+                </div>
+                {% if bm.is_finished and bm.winner_team %}
+                  <div class="mt-2"><span class="badge bg-success">Clasifica: {{ bm.winner_team }}</span></div>
+                {% else %}
+                  <div class="mt-2"><span class="badge bg-secondary">Pendiente</span></div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
+      {% if not ns.has_bracket %}
+        <div class="col-12 text-muted py-3">Todavía no hay eliminatorias creadas. Primero se jugará la fase de grupos.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card card-soft mb-4" id="detalle-pronosticos">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+      <div>
+        <h4 class="mb-0">Detalle de mis puntos</h4>
+        <small class="text-muted">Aquí ves solamente tus pronósticos, tus puntos y la explicación de cada partido.</small>
+      </div>
+      <span class="badge text-bg-primary">Vista participante</span>
+    </div>
+
+    <form id="bulk-predictions-form" method="post" action="{{ url_for('save_all_predictions') }}">
+      <input type="hidden" name="fecha" value="{{ selected_date }}">
+    </form>
+    <div class="d-flex justify-content-end mb-2">
+      <button form="bulk-predictions-form" class="btn btn-success btn-sm fw-bold">Guardar / corregir pronósticos abiertos</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle table-hover">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Partido</th>
+            <th>Mi pronóstico</th>
+            <th>Resultado oficial</th>
+            <th>Estado</th>
+            <th>Explicación</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in matches %}
+          {% set pts = prediction_points_from_values(m.predicted_home_score, m.predicted_away_score, m) %}
+          <tr id="match-{{ m.id }}">
+            <td><strong>{{ m.match_datetime|dt }}</strong><br><span class="mini-muted">{{ m.phase }}{% if m.group_name %} · {{ m.group_name }}{% endif %}</span></td>
+            <td class="fw-semibold">
+              {% if team_flag_url(m.home_team) %}<img src="{{ team_flag_url(m.home_team) }}" alt="{{ m.home_team }}" class="team-flag-img">{% else %}{{ team_flag(m.home_team) }}{% endif %}
+              {{ m.home_team }} vs
+              {% if team_flag_url(m.away_team) %}<img src="{{ team_flag_url(m.away_team) }}" alt="{{ m.away_team }}" class="team-flag-img">{% else %}{{ team_flag(m.away_team) }}{% endif %}
+              {{ m.away_team }}
+            </td>
+            <td>
+              {% if match_is_open(m) %}
+              <div class="prediction-form" style="gap:.35rem;flex-wrap:nowrap;">
+                <input form="bulk-predictions-form" class="form-control score-box numeric-only prediction-draft" type="number" min="0" max="15" step="1" inputmode="numeric" pattern="[0-9]*" name="pred_home_{{ m.id }}" value="{{ m.predicted_home_score if m.predicted_home_score is not none else '' }}" title="Pronóstico {{ m.home_team }}" data-draft-key="pred_home_{{ m.id }}">
+                <span class="fw-bold text-muted">-</span>
+                <input form="bulk-predictions-form" class="form-control score-box numeric-only prediction-draft" type="number" min="0" max="15" step="1" inputmode="numeric" pattern="[0-9]*" name="pred_away_{{ m.id }}" value="{{ m.predicted_away_score if m.predicted_away_score is not none else '' }}" title="Pronóstico {{ m.away_team }}" data-draft-key="pred_away_{{ m.id }}">
+                <button form="bulk-predictions-form" class="btn btn-primary btn-sm" title="Guardar o corregir pronósticos diligenciados">{{ 'Corregir' if m.prediction_id is not none else 'Guardar' }}</button>
+              </div>
+              <div class="mini-muted mt-1">{{ m.home_team }} - {{ m.away_team }}</div>
+              {% else %}
+                <strong>{{ m.predicted_home_score if m.predicted_home_score is not none else '-' }} - {{ m.predicted_away_score if m.predicted_away_score is not none else '-' }}</strong>{% if (not match_is_open(m)) and m.prediction_id is not none and not m.is_finished %}<br><small class="text-muted">Bloqueado 1 día antes del partido.</small>{% endif %}
+              {% endif %}
+            </td>
+            <td>{% if m.is_finished %}<strong>{{ score_with_penalties(m, 'home') }} - {{ score_with_penalties(m, 'away') }}</strong>{% if m.penalty_home is not none and m.penalty_away is not none %}<br><small class="text-muted">Ganador por penales: {{ m.winner_team }}</small>{% endif %}{% else %}<span class="text-muted">Pendiente</span>{% endif %}</td>
+            <td>
+              <span class="badge {% if pts == 5 %}bg-success{% elif pts == 3 %}bg-primary{% elif pts < 0 %}bg-danger{% elif m.is_finished %}bg-secondary{% else %}bg-secondary{% endif %}">
+                {{ prediction_badge_text_from_values(m.predicted_home_score, m.predicted_away_score, m) }}
+              </span>
+            </td>
+            <td class="small">{{ prediction_explanation_from_values(m.predicted_home_score, m.predicted_away_score, m) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No hay partidos para mostrar.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const storageKey = 'polla2026_prediction_drafts';
+    function readDrafts() {
+      try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (e) { return {}; }
+    }
+    function writeDrafts(drafts) {
+      localStorage.setItem(storageKey, JSON.stringify(drafts));
+    }
+    const drafts = readDrafts();
+    document.querySelectorAll('.prediction-draft').forEach(function (input) {
+      const key = input.dataset.draftKey;
+      if (key && drafts[key] !== undefined && input.value === '') input.value = drafts[key];
+      input.addEventListener('input', function () {
+        const current = readDrafts();
+        current[key] = input.value;
+        writeDrafts(current);
+      });
+    });
+    const form = document.getElementById('bulk-predictions-form');
+    if (form) {
+      form.addEventListener('submit', function () {
+        const current = readDrafts();
+        document.querySelectorAll('.prediction-draft').forEach(function (input) {
+          current[input.dataset.draftKey] = input.value;
+        });
+        writeDrafts(current);
+      });
+    }
+  })();
+</script>
+{% endblock %}
