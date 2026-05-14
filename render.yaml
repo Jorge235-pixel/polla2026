@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: polla-mundial-2026
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_PATH
+        value: /var/data/polla_mundial_2026.db
+      - key: UPLOAD_FOLDER
+        value: /var/data/uploads
+    disk:
+      name: polla-data
+      mountPath: /var/data
+      sizeGB: 1
