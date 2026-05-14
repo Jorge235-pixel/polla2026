@@ -1,1 +1,139 @@
-<h1>Hola</h1>
+{% extends 'base.html' %}
+{% block title %}Inicio | Polla Mundial 2026{% endblock %}
+{% block main_container_class %}container-fluid px-3 px-lg-4{% endblock %}
+{% block content %}
+<div class="hero hero-video mb-4">
+  <video class="hero-video-bg" autoplay muted loop playsinline preload="metadata" aria-hidden="true">
+    <source src="{{ url_for('static', filename='video/mundial2026_fondo.mp4') }}" type="video/mp4">
+  </video>
+  <div class="hero-video-content row align-items-center g-4">
+    <div class="col-lg-8">
+      <h1 class="display-6 fw-bold">Sistema de Polla Futbolera - Mundial 2026</h1>
+      {% if not session.get('user_id') %}
+        {% if registrations_open() %}<a class="btn btn-light btn-lg me-2" href="{{ url_for('register') }}">Inscribirme</a>{% else %}<button class="btn btn-light btn-lg me-2" disabled>Inscripciones cerradas</button>{% endif %}
+        <a class="btn btn-outline-light btn-lg" href="{{ url_for('login') }}">Ingresar</a>
+      {% endif %}
+    </div>
+    <div class="col-lg-4 text-center">
+      <div class="d-flex flex-column align-items-center gap-3">
+        <img src="{{ url_for('static', filename='mascota_mundial_2026.jpg') }}" alt="Mascota del Mundial 2026" class="img-fluid hero-logo">
+        <img src="{{ url_for('static', filename='logo_blanco.png') }}" alt="Logo Mundial 2026" class="img-fluid hero-logo p-3" style="max-width:220px; background: rgba(255,255,255,.14);">
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% if registrations_open() %}
+<div class="registration-deadline-card mb-4">
+  <div class="d-flex align-items-start gap-3">
+    <div class="deadline-icon">⏰</div>
+    <div>
+      <div class="deadline-title">Cierre de inscripciones</div>
+      <div class="text-muted">Las inscripciones estarán habilitadas hasta el <span class="deadline-date">{{ registration_close_text }}</span>.</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-12">
+    <div class="card card-soft top-ranking-card overflow-hidden">
+      <div class="ranking-hero p-4 text-white">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+          <div>
+            <div class="small text-uppercase fw-bold opacity-75">Tabla general</div>
+            <h2 class="mb-1 fw-bold">Top participantes</h2>
+            <div class="opacity-75">Ranking actualizado con los puntos acumulados.</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0 ranking-table">
+            <thead>
+              <tr>
+                <th class="text-center" style="width:80px;">Puesto</th>
+                <th>Participante</th>
+                <th class="text-center" style="width:140px;">Puntos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in ranking %}
+              <tr class="{% if loop.index <= 3 %}ranking-top-row{% endif %}">
+                <td class="text-center">
+                  <span class="position-medal">
+                    {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ row.position }}{% endif %}
+                  </span>
+                </td>
+                <td>
+                  <div class="fw-bold">{{ row.full_name }}</div>
+                  {% if loop.index == 1 %}<div class="mini-muted">Líder actual</div>{% endif %}
+                </td>
+                <td class="text-center">
+                  <span class="points-pill">{{ row.points }}</span>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="3" class="text-center p-4">Aún no hay participantes.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card card-soft mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+      <div>
+        <h4 class="mb-0">📅 Partidos del Mundial 2026</h4>
+        <small class="text-muted">Se muestran todos los partidos registrados. Usa el filtro para ver una fecha específica.</small>
+      </div>
+      <span class="badge text-bg-primary">{{ next_matches|length }} partidos</span>
+    </div>
+    <div class="filter-bar mb-3">
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label">Filtrar por fecha</label>
+          <select name="fecha" class="form-select">
+            <option value="">Todas las fechas</option>
+            {% for d in available_dates %}
+            <option value="{{ d }}" {% if selected_date == d %}selected{% endif %}>{{ d|date_only }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-8 d-flex gap-2">
+          <button class="btn btn-primary">Filtrar</button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">Limpiar</a>
+        </div>
+      </form>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Fecha</th><th>Fase</th><th>Partido</th><th>Resultado</th></tr></thead>
+        <tbody>
+          {% for m in next_matches %}
+          <tr>
+            <td><strong>{{ m.match_datetime|dt }}</strong></td>
+            <td><span class="phase-pill {{ phase_class(m.phase) }}">{{ m.phase }}</span>{% if m.group_name %}<div class="mini-muted">{{ m.group_name }}</div>{% endif %}</td>
+            <td class="fw-semibold">
+              {% if team_flag_url(m.home_team) %}<img src="{{ team_flag_url(m.home_team) }}" alt="{{ m.home_team }}" class="team-flag-img">{% else %}{{ team_flag(m.home_team) }}{% endif %}
+              {{ m.home_team }} vs
+              {% if team_flag_url(m.away_team) %}<img src="{{ team_flag_url(m.away_team) }}" alt="{{ m.away_team }}" class="team-flag-img">{% else %}{{ team_flag(m.away_team) }}{% endif %}
+              {{ m.away_team }}
+            </td>
+            <td>{% if m.is_finished %}<strong>{{ score_with_penalties(m, 'home') }} - {{ score_with_penalties(m, 'away') }}</strong>{% else %}<span class="text-muted">Pendiente</span>{% endif %}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-center text-muted py-4">No hay partidos para mostrar.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
