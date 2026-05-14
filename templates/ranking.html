@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Ranking{% endblock %}
+{% block content %}
+<div class="row g-4 mb-4">
+  <div class="col-md-6">
+    <div class="card card-soft border-start border-4 border-warning"><div class="card-body">
+      <h4>🥇 Primer puesto</h4>
+      <p class="mb-0">{% if first %}<span class="d-inline-flex align-items-center gap-2">{% if first.photo %}<img src="{{ photo_url(first.photo) }}" alt="{{ first.full_name }}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid #facc15;">{% else %}<span style="width:42px;height:42px;border-radius:50%;background:#fde68a;display:inline-flex;align-items:center;justify-content:center;font-weight:700;">{{ first.full_name[0] }}</span>{% endif %}<strong>{{ first.full_name }}</strong></span> con {{ first.points }} puntos{% else %}Aún no disponible{% endif %}</p>
+    </div></div>
+  </div>
+  <div class="col-md-6">
+    <div class="card card-soft border-start border-4 border-secondary"><div class="card-body">
+      <h4>🥈 Segundo puesto</h4>
+      <p class="mb-0">{% if second %}<span class="d-inline-flex align-items-center gap-2">{% if second.photo %}<img src="{{ photo_url(second.photo) }}" alt="{{ second.full_name }}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;border:2px solid #cbd5e1;">{% else %}<span style="width:42px;height:42px;border-radius:50%;background:#e2e8f0;display:inline-flex;align-items:center;justify-content:center;font-weight:700;">{{ second.full_name[0] }}</span>{% endif %}<strong>{{ second.full_name }}</strong></span> con {{ second.points }} puntos{% else %}Aún no disponible{% endif %}</p>
+    </div></div>
+  </div>
+</div>
+
+<div class="card card-soft"><div class="card-body">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h3 class="mb-0">Tabla general</h3>
+      <small class="text-muted">Puntaje oficial: 5 puntos por marcador exacto, 3 por acertar ganador o empate y -1 si falla. La tabla muestra el detalle de exactos, fallos y aciertos. {% if not is_admin %}La descarga del Excel está disponible únicamente para el administrador.{% endif %}</small>
+    </div>
+    {% if is_admin %}<a href="{{ url_for('export_ranking') }}" class="btn btn-success">Descargar Excel</a>{% endif %}
+  </div>
+  <div class="table-responsive">
+    <table class="table table-striped">
+      <thead><tr><th>Pos.</th><th>Participante</th><th>Puntos</th><th>Exactos</th><th>Fallos</th><th>Aciertos</th><th>Pronósticos</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.position }}</td>
+          <td><div class="d-flex align-items-center gap-2">{% if row.photo %}<img src="{{ photo_url(row.photo) }}" alt="{{ row.full_name }}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid #d7deea;">{% else %}<span style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:#334155;">{{ row.full_name[0] }}</span>{% endif %}<span>{{ row.full_name }}</span></div></td>
+          <td>{{ row.points }}</td>
+          <td>{{ row.exact }}</td>
+          
+          <td>{{ row.failures }}</td>
+          <td>{{ row.hits }}</td>
+          <td>{{ row.predictions }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9">Todavía no hay participantes.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div></div>
+{% endblock %}
