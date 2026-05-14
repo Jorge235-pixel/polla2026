@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Inscripción{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card card-soft"><div class="card-body p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">← Volver al inicio</a>
+        <span class="text-muted small">Registro de participantes</span>
+      </div>
+      <h3 class="mb-3">Formulario de inscripción</h3>
+      <p class="text-muted">Inscripciones abiertas hasta el {{ registration_close_text }}.</p>
+      {% if registration_closed %}
+      <div class="alert alert-warning">Las inscripciones ya están cerradas.</div>
+      {% endif %}
+      <form method="post" enctype="multipart/form-data">
+        <div class="mb-3"><label class="form-label">Nombre completo</label><input type="text" name="full_name" class="form-control name-only" minlength="2" maxlength="80" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\'\- ]+" title="Solo letras y espacios. No uses números ni símbolos." required><div class="form-text">Solo letras y espacios. No números ni símbolos.</div></div>
+        <div class="mb-3"><label class="form-label">Correo</label><input type="email" name="email" class="form-control" required></div>
+        <div class="mb-3">
+          <label class="form-label">Foto de perfil (opcional)</label>
+          <div class="border rounded-4 p-3 bg-light">
+            <input type="file" name="photo" id="photoInput" class="form-control" accept=".jpg,.jpeg,.png,image/jpeg,image/png" capture="user">
+            <div class="form-text">Desde celular permite tomar la foto; desde PC permite usar cámara o seleccionar una imagen, según el navegador.</div>
+            <div class="mt-3 text-center" id="photoPreviewBox" style="display:none;">
+              <img id="photoPreview" alt="Vista previa de la foto" class="rounded-circle border shadow-sm" style="width:120px;height:120px;object-fit:cover;">
+              <div class="small text-muted mt-2">Vista previa de la foto seleccionada</div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3"><label class="form-label">Contraseña</label><input type="password" name="password" class="form-control" minlength="8" maxlength="30" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,30}" title="Debe tener mayúscula, minúscula, número y símbolo. Mínimo 8 caracteres." required><div class="form-text">Mínimo 8 caracteres: mayúscula, minúscula, número y símbolo.</div></div>
+          <div class="col-md-6 mb-3"><label class="form-label">Confirmar contraseña</label><input type="password" name="confirm_password" class="form-control" minlength="8" maxlength="30" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{8,30}" title="Debe tener mayúscula, minúscula, número y símbolo. Mínimo 8 caracteres." required></div>
+        </div>
+        <button class="btn btn-primary w-100" {% if registration_closed %}disabled{% endif %}>Crear cuenta</button>
+      </form>
+    </div></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const photoInput = document.getElementById('photoInput');
+  const photoPreviewBox = document.getElementById('photoPreviewBox');
+  const photoPreview = document.getElementById('photoPreview');
+
+  if (photoInput) {
+    photoInput.addEventListener('change', function () {
+      const file = this.files && this.files[0];
+      if (!file) {
+        photoPreviewBox.style.display = 'none';
+        return;
+      }
+      const allowedTypes = ['image/jpeg', 'image/png'];
+      const allowedExt = /\.(jpe?g|png)$/i.test(file.name || '');
+      if (!allowedTypes.includes(file.type) && !allowedExt) {
+        this.value = '';
+        photoPreviewBox.style.display = 'none';
+        alert('Archivo no permitido. Solo se aceptan fotos .jpg, .jpeg o .png.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        photoPreview.src = e.target.result;
+        photoPreviewBox.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+</script>
+{% endblock %}
