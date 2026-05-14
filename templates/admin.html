@@ -1,0 +1,482 @@
+{% extends 'base.html' %}
+{% block title %}Administrador{% endblock %}
+{% block main_container_class %}container-fluid px-3 px-lg-4 px-xxl-5{% endblock %}
+{% block content %}
+<div class="admin-wide-page">
+
+<div class="alert alert-danger border-0 shadow-sm mb-4" style="border-radius:18px;">
+  <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3">
+    <div>
+      <h4 class="alert-heading mb-1">🧹 Limpiar base de datos de pruebas</h4>
+      <div>Úsalo solo cuando termines las pruebas. Conserva el administrador, borra participantes y pronósticos, reinicia resultados y deja únicamente el calendario inicial de grupos.</div>
+      <small class="d-block mt-1">No cambia la fórmula de puntajes: 5 exacto, 3 ganador/empate, 0 falla.</small>
+    </div>
+    <form method="post" action="{{ url_for('clean_database') }}" class="d-flex flex-column flex-sm-row gap-2 align-items-stretch" onsubmit="return confirm('Esta acción limpiará participantes, pronósticos y resultados de prueba. ¿Estás completamente seguro?');">
+      <input class="form-control" style="min-width:150px;" name="confirmation" autocomplete="off" placeholder="Escribe LIMPIAR" required>
+      <button class="btn btn-danger fw-bold text-nowrap">Limpiar BD</button>
+    </form>
+  </div>
+</div>
+<div class="alert alert-info border-0 shadow-sm mb-4" style="border-radius:18px;">
+  <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3">
+    <div>
+      <h4 class="alert-heading mb-1">⚽ Fases manuales activadas</h4>
+      <div>El sistema ya no arma automáticamente dieciseisavos, octavos, cuartos, semifinal ni final. Puedes crear los cruces manualmente desde el asistente de fases.</div>
+      <small class="d-block mt-1">Los resultados, pronósticos, puntos y ranking sí siguen funcionando automáticamente.</small>
+    </div>
+  </div>
+</div>
+
+
+<style>
+.bracket-wrap{overflow-x:auto;padding:10px 4px 18px;}
+.bracket-grid{display:flex;gap:28px;align-items:flex-start;min-width:1050px;}
+.bracket-col{min-width:235px;}
+.bracket-title{font-weight:800;text-align:center;margin-bottom:12px;color:#0f172a;}
+.bracket-card{background:#f8fafc;border:1px solid #d8dee9;border-radius:16px;padding:12px;margin-bottom:14px;box-shadow:0 5px 14px rgba(15,23,42,.05);position:relative;}
+.bracket-card.finished{border-color:#86efac;background:#f0fdf4;}
+.bracket-date{font-size:.83rem;color:#64748b;font-weight:700;margin-bottom:7px;}
+.bracket-team{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:700;padding:3px 0;}
+.bracket-team .name{display:flex;align-items:center;gap:6px;min-width:0;}
+.bracket-team.winner{color:#15803d;}
+.bracket-score{color:#0f172a;}
+.bracket-empty{background:#fff;border:1px dashed #cbd5e1;border-radius:16px;padding:18px;text-align:center;color:#64748b;}
+.bracket-admin-form{border-top:1px solid #e2e8f0;margin-top:9px;padding-top:9px;}
+</style>
+
+<div class="card card-soft mb-4"><div class="card-body">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+    <div>
+      <h4 class="mb-0">🏆 Llaves manuales del Mundial 2026</h4>
+      <div class="mini-muted">Aquí ves las eliminatorias que vayas creando. Primero usa el asistente “Crear siguiente fase”; después cargas resultados y, si corresponde, envías el ganador a la siguiente llave.</div>
+    </div>
+  </div>
+  <div class="bracket-wrap">
+    <div class="bracket-grid">
+      {% for phase, rows in bracket_data.items() %}
+      <div class="bracket-col">
+        <div class="bracket-title">{{ phase }}</div>
+        {% if rows %}
+          {% for bm in rows %}
+          <div class="bracket-card {% if bm.is_finished %}finished{% endif %}">
+            <div class="bracket-date">{{ bm.match_datetime|dt }}</div>
+            <div class="bracket-team {% if bm.winner_team == bm.home_team %}winner{% endif %}">
+              <span class="name">{% if team_flag_url(bm.home_team) %}<img src="{{ team_flag_url(bm.home_team) }}" class="team-flag-img" alt="{{ bm.home_team }}">{% else %}<span>{{ team_flag(bm.home_team) }}</span>{% endif %}<span>{{ bm.home_team }}</span></span>
+              {% if bm.is_finished %}<span class="bracket-score">{{ score_with_penalties(bm, 'home') }}</span>{% endif %}
+            </div>
+            <div class="bracket-team {% if bm.winner_team == bm.away_team %}winner{% endif %}">
+              <span class="name">{% if team_flag_url(bm.away_team) %}<img src="{{ team_flag_url(bm.away_team) }}" class="team-flag-img" alt="{{ bm.away_team }}">{% else %}<span>{{ team_flag(bm.away_team) }}</span>{% endif %}<span>{{ bm.away_team }}</span></span>
+              {% if bm.is_finished %}<span class="bracket-score">{{ score_with_penalties(bm, 'away') }}</span>{% endif %}
+            </div>
+            {% if bm.is_finished and bm.winner_team %}
+              <div class="mt-2"><span class="badge bg-success">Clasifica: {{ bm.winner_team }}</span></div>
+              <form method="post" action="{{ url_for('classify_match_winner', match_id=bm.id, fecha=selected_date) }}" class="bracket-admin-form">
+                <div class="small fw-semibold mb-1">Enviar clasificado a:</div>
+                <select name="next_match_id" class="form-select form-select-sm mb-1" required>
+                  <option value="">Seleccionar partido destino</option>
+                  {% for dm in destination_matches %}
+                    {% if dm.id != bm.id %}<option value="{{ dm.id }}" {% if bm.next_match_id == dm.id %}selected{% endif %}>{{ dm.phase }} · {{ dm.match_datetime|dt }} · {{ dm.home_team }} vs {{ dm.away_team }}</option>{% endif %}
+                  {% endfor %}
+                </select>
+                <select name="next_match_slot" class="form-select form-select-sm mb-2" required>
+                  <option value="home" {% if bm.next_match_slot == 'home' %}selected{% endif %}>Casilla local / arriba</option>
+                  <option value="away" {% if bm.next_match_slot == 'away' %}selected{% endif %}>Casilla visitante / abajo</option>
+                </select>
+                <button class="btn btn-primary btn-sm w-100">Clasificar a siguiente fase</button>
+              </form>
+            {% elif not bm.is_finished %}
+              <div class="mt-2"><span class="badge bg-secondary">Pendiente</span></div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="bracket-empty">Todavía no hay partidos creados para esta fase.</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div></div>
+
+<div class="row g-4 align-items-start">
+  <div class="col-xxl-3 col-xl-4 col-lg-5">
+    <div class="card card-soft"><div class="card-body">
+      <h4 class="mb-1">⚽ Crear siguiente fase</h4>
+      <p class="text-muted small mb-3">Asistente: escoges fase, equipos, fecha y hora de cada partido. No toca los partidos de grupos.</p>
+      <form method="post" action="{{ url_for('create_phase_wizard') }}" onsubmit="return confirm('Se crearán los partidos llenados para esta fase. ¿Continuar?');">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Fase a crear</label>
+          <select class="form-select" name="wizard_phase" id="wizard_phase_select" required>
+            <option value="">Seleccionar fase</option>
+            <option value="Dieciseisavos de final">Eliminatoria de 32 / Dieciseisavos</option>
+            <option value="Octavos de final">Octavos de final</option>
+            <option value="Cuartos de final">Cuartos de final</option>
+            <option value="Semifinal">Semifinal</option>
+            <option value="Tercer puesto">Tercer puesto</option>
+            <option value="Final">Final</option>
+          </select>
+        </div>
+        <div class="alert alert-light border small mb-3" id="wizard_phase_help">
+          Selecciona una fase. El sistema cambiará automáticamente la lista de equipos según la fase anterior.
+        </div>
+        <div class="wizard-match-list">
+          {% for n in range(1, 17) %}
+          <div class="wizard-match-row border rounded-3 p-2 mb-2 bg-white">
+            <div class="fw-bold small text-primary mb-2">Partido {{ n }}</div>
+            <div class="row g-2">
+              <div class="col-12">
+                <select class="form-select form-select-sm wizard-team-select" name="wizard_home[]" data-placeholder="Equipo local / arriba">
+                  <option value="">Equipo local / arriba</option>
+                  {% for team in team_names %}<option value="{{ team }}">{{ team }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="col-12">
+                <select class="form-select form-select-sm wizard-team-select" name="wizard_away[]" data-placeholder="Equipo visitante / abajo">
+                  <option value="">Equipo visitante / abajo</option>
+                  {% for team in team_names %}<option value="{{ team }}">{{ team }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label small mb-1 text-muted">Fecha y hora del partido</label>
+                <input class="form-control form-control-sm wizard-datetime" type="datetime-local" name="wizard_datetime[]">
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <button class="btn btn-success w-100 fw-bold mt-2">Guardar fase y crear partidos</button>
+      </form>
+      <script>
+        document.addEventListener('DOMContentLoaded', function () {
+          const phaseSelect = document.getElementById('wizard_phase_select');
+          const helpBox = document.getElementById('wizard_phase_help');
+          const eligibleTeams = {{ eligible_teams_by_phase|tojson }};
+          const phaseCounts = {{ phase_match_counts|tojson }};
+          const previousLabels = {
+            'Dieciseisavos de final': 'equipos clasificados desde grupos',
+            'Octavos de final': 'ganadores de Dieciseisavos de final',
+            'Cuartos de final': 'ganadores de Octavos de final',
+            'Semifinal': 'ganadores de Cuartos de final',
+            'Final': 'ganadores de Semifinal',
+            'Tercer puesto': 'perdedores de Semifinal'
+          };
+
+          function rebuildTeamSelect(select, teams) {
+            const placeholder = select.dataset.placeholder || 'Seleccionar equipo';
+            const current = select.value;
+            select.innerHTML = '';
+            const empty = document.createElement('option');
+            empty.value = '';
+            empty.textContent = placeholder;
+            select.appendChild(empty);
+            teams.forEach(function (team) {
+              const option = document.createElement('option');
+              option.value = team;
+              option.textContent = team;
+              if (team === current) option.selected = true;
+              select.appendChild(option);
+            });
+          }
+
+          function updateWizardByPhase() {
+            const phase = phaseSelect.value;
+            const teams = eligibleTeams[phase] || [];
+            const maxRows = phaseCounts[phase] || 16;
+            document.querySelectorAll('.wizard-match-row').forEach(function (row, index) {
+              row.style.display = index < maxRows ? '' : 'none';
+              if (index >= maxRows) {
+                row.querySelectorAll('input, select').forEach(function (field) { field.value = ''; field.required = false; field.disabled = true; });
+              } else {
+                row.querySelectorAll('input, select').forEach(function (field) { field.disabled = false; });
+              }
+            });
+            document.querySelectorAll('.wizard-team-select').forEach(function (select) {
+              rebuildTeamSelect(select, teams);
+              const row = select.closest('.wizard-match-row');
+              select.disabled = !phase || teams.length === 0 || (row && row.style.display === 'none');
+            });
+            document.querySelectorAll('.wizard-datetime').forEach(function (input) {
+              const row = input.closest('.wizard-match-row');
+              input.disabled = !phase || teams.length === 0 || (row && row.style.display === 'none');
+            });
+            if (!phase) {
+              helpBox.className = 'alert alert-light border small mb-3';
+              helpBox.textContent = 'Selecciona una fase. El sistema cambiará automáticamente la lista de equipos según la fase anterior.';
+            } else if (teams.length === 0) {
+              helpBox.className = 'alert alert-warning border small mb-3';
+              helpBox.textContent = 'Para crear ' + phase + ' primero debes terminar y guardar los clasificados de: ' + (previousLabels[phase] || 'la fase anterior') + '.';
+            } else {
+              helpBox.className = 'alert alert-success border small mb-3';
+              helpBox.textContent = 'Creando ' + phase + ': se muestran solo ' + (previousLabels[phase] || 'equipos habilitados') + '. Filas necesarias: ' + maxRows + '. Recuerda poner fecha y hora en cada partido que llenes.';
+            }
+          }
+
+          if (phaseSelect) {
+            phaseSelect.addEventListener('change', updateWizardByPhase);
+            updateWizardByPhase();
+          }
+        });
+      </script>
+
+
+      <hr class="my-4">
+      <details>
+        <summary class="fw-bold text-muted">Formulario avanzado: agregar un solo partido</summary>
+        <form method="post" action="{{ url_for('add_match') }}" class="mt-3">
+          <div class="mb-2">
+            <label class="form-label">Fase</label>
+            <select class="form-select" name="phase" required>
+              <option value="">Seleccionar fase</option>
+              {% for phase in manual_phases %}<option value="{{ phase }}">{{ phase }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-2"><label class="form-label">Referencia opcional</label><input class="form-control" name="group_name" placeholder="Ej: Ganador Grupo A vs 3º Grupo C"></div>
+          <div class="mb-2"><label class="form-label">Fecha y hora</label><input class="form-control" type="datetime-local" name="match_datetime" required></div>
+          <div class="mb-2"><label class="form-label">Equipo local</label><input class="form-control" name="home_team" list="teams-list-admin" required></div>
+          <div class="mb-2"><label class="form-label">Equipo visitante</label><input class="form-control" name="away_team" list="teams-list-admin" required></div>
+          <datalist id="teams-list-admin">{% for team in team_names %}<option value="{{ team }}"></option>{% endfor %}</datalist>
+          <div class="mb-3"><label class="form-label">Estadio</label><input class="form-control" name="stadium"></div>
+          <button class="btn btn-outline-primary w-100">Agregar partido individual</button>
+        </form>
+      </details>
+    </div></div>
+
+    <div class="card card-soft mt-4"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Participantes inscritos</h4>
+        <a class="btn btn-success btn-sm" href="{{ url_for('export_ranking') }}">Descargar Excel</a>
+      </div>
+      <ul class="list-group participants-list">
+        {% for user in users %}
+        <li class="list-group-item">
+          <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+            <div class="d-flex align-items-center gap-2">{% if user.photo %}<img src="{{ photo_url(user.photo) }}" alt="{{ user.full_name }}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid #d7deea;">{% else %}<span style="width:42px;height:42px;border-radius:50%;background:#e2e8f0;display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:#334155;">{{ user.full_name[0] }}</span>{% endif %}<div><div class="fw-semibold">{{ user.full_name }}</div><small class="text-muted">{{ user.email }}</small></div></div>
+            <div class="participant-actions">
+              <a class="btn btn-outline-primary btn-sm" href="{{ url_for('edit_user', user_id=user.id) }}">Editar</a>
+              <form method="post" action="{{ url_for('delete_user', user_id=user.id) }}" onsubmit="return confirm('¿Deseas eliminar este participante? Se borrarán también sus pronósticos.');">
+                <button class="btn btn-outline-danger btn-sm">Eliminar</button>
+              </form>
+            </div>
+          </div>
+        </li>
+        {% else %}
+        <li class="list-group-item">Sin participantes.</li>
+        {% endfor %}
+      </ul>
+    </div></div>
+  </div>
+
+  <div class="col-xxl-9 col-xl-8 col-lg-7">
+
+    <div class="card card-soft mb-4" id="pronosticos-usuarios"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+          <h4 class="mb-0">Pronósticos registrados por los usuarios</h4>
+          <div class="mini-muted">Aquí el administrador ve lo que digitó cada participante y los puntos que recibe cuando el partido ya tiene resultado.</div>
+        </div>
+      </div>
+      <div class="table-responsive predictions-scroll">
+        <table class="table table-sm table-striped align-middle predictions-table">
+          <thead><tr><th>Fecha</th><th>Participante</th><th>Partido</th><th>Pronóstico</th><th>Resultado oficial</th><th>Estado / puntos</th></tr></thead>
+          <tbody>
+          {% for p in prediction_rows %}
+            <tr>
+              <td>{{ p.match_datetime|dt }}</td>
+              <td><strong>{{ p.full_name }}</strong><br><small class="text-muted">{{ p.email }}</small></td>
+              <td>{{ p.home_team }} vs {{ p.away_team }}<br><small class="text-muted">{{ p.phase }}{% if p.group_name %} · {{ p.group_name }}{% endif %}</small></td>
+              <td>
+                <form method="post" action="{{ url_for('update_prediction_admin', prediction_id=p.id) }}" class="d-flex align-items-center gap-1 flex-wrap">
+                  <input type="hidden" name="fecha" value="{{ selected_date }}">
+                  <input type="number" min="0" max="15" step="1" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm score-box numeric-only" name="predicted_home_score" value="{{ p.predicted_home_score }}" title="Corregir local" required>
+                  <span class="fw-bold">-</span>
+                  <input type="number" min="0" max="15" step="1" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm score-box numeric-only" name="predicted_away_score" value="{{ p.predicted_away_score }}" title="Corregir visitante" required>
+                  <button class="btn btn-outline-primary btn-sm">Corregir</button>
+                </form>
+              </td>
+              <td>{% if p.is_finished %}<strong>{{ p.home_score }} - {{ p.away_score }}</strong>{% else %}<span class="text-muted">Pendiente</span>{% endif %}</td>
+              <td><span class="badge {% if p.points == 5 %}bg-success{% elif p.points == 3 %}bg-primary{% elif p.points < 0 %}bg-danger{% elif p.is_finished %}bg-secondary{% else %}bg-warning text-dark{% endif %}">{{ p.status_label }}</span></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="6">Todavía no hay pronósticos registrados para esta vista.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div></div>
+
+    <div class="card card-soft mb-4"><div class="card-body">
+      <h4 class="mb-3">Tabla de grupos automática</h4>
+      <div class="mini-muted mb-3">Se actualiza con cada resultado final. Al terminar todos los partidos de grupos, revisa esta tabla y crea manualmente los cruces de la siguiente fase.</div>
+      <div class="row g-3">
+        {% for group, rows in standings.items() %}
+        <div class="col-xxl-4 col-xl-6">
+          <div class="border rounded-3 p-2 bg-white">
+            <strong class="text-primary">{{ group }}</strong>
+            <div class="table-responsive">
+              <table class="table table-sm mb-0">
+                <thead><tr><th>Equipo</th><th>Pts</th><th>PJ</th><th>GF</th><th>GC</th><th>DG</th></tr></thead>
+                <tbody>
+                  {% for r in rows %}
+                  <tr class="{% if loop.index <= 2 %}table-success{% elif loop.index == 3 %}table-warning{% endif %}"><td>{{ r.team }}</td><td><strong>{{ r.pts }}</strong></td><td>{{ r.pj }}</td><td>{{ r.gf }}</td><td>{{ r.gc }}</td><td>{{ r.gd }}</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div></div>
+
+    <div class="filter-bar mb-4">
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label">Ver partidos por fecha</label>
+          <select name="fecha" class="form-select">
+            <option value="">Todas las fechas</option>
+            {% for d in available_dates %}
+            <option value="{{ d }}" {% if selected_date == d %}selected{% endif %}>{{ d|date_only }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-7 d-flex gap-2">
+          <button class="btn btn-primary">Filtrar</button>
+          <a class="btn btn-outline-secondary" href="{{ url_for('admin_panel') }}">Limpiar</a>
+        </div>
+      </form>
+    </div>
+
+
+
+    <div class="alert alert-warning border-0 shadow-sm mb-4" style="border-radius:18px;">
+      <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3">
+        <div>
+          <h4 class="alert-heading mb-1">⚽ Herramientas rápidas de prueba</h4>
+          <div>Este botón llena automáticamente todos los marcadores de la fase de grupos para probar tablas, ranking y clasificados manuales.</div>
+          <small class="d-block mt-1">No borra partidos ni participantes. Las fases siguientes siguen siendo manuales.</small>
+        </div>
+        <div class="d-flex flex-column flex-sm-row gap-2">
+          <form method="post" action="{{ url_for('simulate_group_results', fecha=selected_date) }}" onsubmit="return confirm('Se llenarán marcadores aleatorios para TODOS los partidos de grupos. ¿Continuar?');">
+            <button class="btn btn-warning fw-bold text-nowrap">Generar marcadores aleatorios</button>
+          </form>
+          <form method="post" action="{{ url_for('clear_results_only', fecha=selected_date) }}" onsubmit="return confirm('Se limpiarán solo los marcadores y estados de partidos. ¿Continuar?');">
+            <button class="btn btn-outline-danger fw-bold text-nowrap">Limpiar solo marcadores</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="card card-soft"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+          <h4 class="mb-0">Cargar resultados</h4>
+          <div class="mini-muted">Pendientes y fases siguientes aparecen primero. Los partidos ya jugados quedan abajo. Las nuevas fases se crean únicamente de forma manual.</div>
+        </div>
+      </div>
+      {% for day in matches_by_day %}
+      <div class="day-board mb-3">
+        <div class="day-board-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <strong class="text-primary">{{ day.label|capitalize }}</strong>
+          <span class="mini-muted">{{ day.matches|length }} partidos</span>
+        </div>
+        <div>
+          {% for m in day.matches %}
+          <div class="match-row p-3" id="admin-match-{{ m.id }}">
+            <div class="row g-3 align-items-center">
+              <div class="col-lg-2 col-md-3"><strong>{{ m.match_datetime[11:16] }}</strong></div>
+              <div class="col-lg-2 col-md-3">
+                <span class="phase-pill {{ phase_class(m.phase) }}">{{ m.phase }}</span>
+                {% if m.group_name %}<div class="mini-muted mt-1">{{ m.group_name }}</div>{% endif %}
+              </div>
+              <div class="col-lg-3 col-md-6 fw-semibold"><span class="team-vs"><span class="team-name">{% if team_flag_url(m.home_team) %}<img src="{{ team_flag_url(m.home_team) }}" alt="{{ m.home_team }}" class="team-flag-img">{% else %}<span>{{ team_flag(m.home_team) }}</span>{% endif %}<span>{{ m.home_team }}</span></span><span>vs</span><span class="team-name">{% if team_flag_url(m.away_team) %}<img src="{{ team_flag_url(m.away_team) }}" alt="{{ m.away_team }}" class="team-flag-img">{% else %}<span>{{ team_flag(m.away_team) }}</span>{% endif %}<span>{{ m.away_team }}</span></span></span></div>
+              <div class="col-lg-2 col-md-4">
+                {% if m.is_finished %}
+                  <strong>{{ m.home_score }} - {{ m.away_score }}</strong>
+                  {% if m.penalty_home is not none and m.penalty_away is not none %}<br><small class="text-muted">Penales: {{ m.penalty_home }} - {{ m.penalty_away }}</small>{% endif %}
+                  {% if m.winner_team %}<br><span class="badge bg-success">Pasa: {{ m.winner_team }}</span>{% endif %}
+                {% else %}<span class="text-muted">Pendiente</span>{% endif %}
+              </div>
+              <div class="col-xl-3 col-lg-4 col-md-8 match-actions-panel">
+                <div class="mb-2">
+                  <a class="btn btn-outline-primary btn-sm" href="{{ url_for('edit_match', match_id=m.id, fecha=selected_date) }}">Editar partido</a>
+                </div>
+                {% if not m.is_finished %}
+                <form method="post" action="{{ url_for('save_result', match_id=m.id, fecha=selected_date) }}" class="result-form">
+                  <div class="d-flex gap-2 align-items-center flex-wrap">
+                    <input type="number" min="0" max="15" step="1" inputmode="numeric" pattern="[0-9]*" class="form-control score-box numeric-only" name="home_score" placeholder="{{ m.home_team }}" required>
+                    <input type="number" min="0" max="15" step="1" inputmode="numeric" pattern="[0-9]*" class="form-control score-box numeric-only" name="away_score" placeholder="{{ m.away_team }}" required>
+                    <button class="btn btn-success btn-sm">Cerrar</button>
+                  </div>
+                  {% if is_elimination_phase(m.phase) %}
+                  <div class="mt-2 p-2 rounded border bg-light">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                      <label class="form-label small mb-0 fw-semibold text-danger">Penales solo si el partido queda empatado</label>
+                      <span class="badge bg-warning text-dark">Eliminatoria</span>
+                    </div>
+                    <select class="form-select form-select-sm mb-2" name="winner_team">
+                      <option value="">Seleccionar equipo que clasifica</option>
+                      <option value="{{ m.home_team }}">{{ m.home_team }}</option>
+                      <option value="{{ m.away_team }}">{{ m.away_team }}</option>
+                    </select>
+                    <div class="row g-2 align-items-center">
+                      <div class="col">
+                        <input type="number" min="0" max="30" step="1" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm numeric-only" name="penalty_home" placeholder="Penales {{ m.home_team }}">
+                      </div>
+                      <div class="col-auto fw-bold">-</div>
+                      <div class="col">
+                        <input type="number" min="0" max="30" step="1" inputmode="numeric" pattern="[0-9]*" class="form-control form-control-sm numeric-only" name="penalty_away" placeholder="Penales {{ m.away_team }}">
+                      </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Ejemplo: si el marcador queda 1-1, escribe penales 5-4 y selecciona el equipo que clasifica. El sistema valida que coincida.</small>
+                    <div class="mt-2 border-top pt-2">
+                      <label class="form-label small fw-semibold mb-1">Enviar clasificado a siguiente llave (opcional)</label>
+                      <select name="next_match_id" class="form-select form-select-sm mb-1">
+                        <option value="">No enviar todavía</option>
+                        {% for dm in destination_matches %}
+                          {% if dm.id != m.id %}<option value="{{ dm.id }}">{{ dm.phase }} · {{ dm.match_datetime|dt }} · {{ dm.home_team }} vs {{ dm.away_team }}</option>{% endif %}
+                        {% endfor %}
+                      </select>
+                      <select name="next_match_slot" class="form-select form-select-sm">
+                        <option value="">Seleccionar casilla</option>
+                        <option value="home">Casilla local / arriba</option>
+                        <option value="away">Casilla visitante / abajo</option>
+                      </select>
+                    </div>
+                  </div>
+                  {% endif %}
+                </form>
+                {% else %}
+                {% if is_elimination_phase(m.phase) and m.winner_team %}
+                <form method="post" action="{{ url_for('classify_match_winner', match_id=m.id, fecha=selected_date) }}" class="mb-2 p-2 rounded border bg-light">
+                  <div class="small fw-semibold mb-1">Clasificar {{ m.winner_team }} a:</div>
+                  <select name="next_match_id" class="form-select form-select-sm mb-1" required>
+                    <option value="">Seleccionar destino</option>
+                    {% for dm in destination_matches %}
+                      {% if dm.id != m.id %}<option value="{{ dm.id }}" {% if m.next_match_id == dm.id %}selected{% endif %}>{{ dm.phase }} · {{ dm.match_datetime|dt }}</option>{% endif %}
+                    {% endfor %}
+                  </select>
+                  <select name="next_match_slot" class="form-select form-select-sm mb-2" required>
+                    <option value="home" {% if m.next_match_slot == 'home' %}selected{% endif %}>Local / arriba</option>
+                    <option value="away" {% if m.next_match_slot == 'away' %}selected{% endif %}>Visitante / abajo</option>
+                  </select>
+                  <button class="btn btn-primary btn-sm w-100">Enviar clasificado</button>
+                </form>
+                {% endif %}
+                <form method="post" action="{{ url_for('reopen_match', match_id=m.id, fecha=selected_date) }}">
+                  <button class="btn btn-outline-secondary btn-sm">Reabrir</button>
+                </form>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="alert alert-light border">No hay partidos para la fecha seleccionada.</div>
+      {% endfor %}
+    </div></div>
+  </div>
+</div>
+</div>
+{% endblock %}
