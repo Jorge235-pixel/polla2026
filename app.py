@@ -45,6 +45,57 @@ PREDICTION_LOCK_MINUTES = 1440
 MAX_SCORE_VALUE = 15
 REGISTRATION_CLOSE = datetime(2026, 6, 8, 23, 59, 59)
 
+AUTHORIZED_PARTICIPANTS_PATH = os.environ.get('AUTHORIZED_PARTICIPANTS_PATH') or os.path.join(BASE_DIR, 'participantes_autorizados.csv')
+
+
+def normalize_text_for_lookup(value: str) -> str:
+    """Normaliza texto para comparar nombres sin depender de mayúsculas, acentos o comas."""
+    value = (value or '').strip().casefold()
+    value = ''.join(ch for ch in unicodedata.normalize('NFKD', value) if not unicodedata.combining(ch))
+    value = re.sub(r'[^a-z0-9]+', ' ', value)
+    return ' '.join(value.split())
+
+
+def normalize_name_tokens(value: str) -> str:
+    """Compara nombres por tokens ordenados: acepta 'APELLIDO, NOMBRE' o 'Nombre Apellido'."""
+    normalized = normalize_text_for_lookup(value)
+    tokens = [token for token in normalized.split() if token]
+    return ' '.join(sorted(tokens))
+
+
+def load_authorized_participants() -> dict[str, str]:
+    """Carga la lista autorizada desde participantes_autorizados.csv.
+
+    Formato esperado:
+    full_name,email
+    MESA HERNANDEZ, CINDY KATHERINE,ck.mesa@uniandes.edu.co
+    """
+    participants = {}
+    if not os.path.exists(AUTHORIZED_PARTICIPANTS_PATH):
+        return participants
+    import csv
+    with open(AUTHORIZED_PARTICIPANTS_PATH, newline='', encoding='utf-8-sig') as fh:
+        reader = csv.DictReader(fh)
+        for row in reader:
+            email = (row.get('email') or row.get('Correo electrónico laboral') or '').strip().lower()
+            full_name = (row.get('full_name') or row.get('Apellido y Nombre') or row.get('nombre') or '').strip()
+            if email and full_name:
+                participants[email] = full_name
+    return participants
+
+
+def is_authorized_participant(full_name: str, email: str) -> tuple[bool, str | None]:
+    """Valida que correo y nombre pertenezcan a la misma persona de la lista autorizada."""
+    email = (email or '').strip().lower()
+    authorized = load_authorized_participants()
+    listed_name = authorized.get(email)
+    if not listed_name:
+        return False, None
+    if normalize_name_tokens(full_name) != normalize_name_tokens(listed_name):
+        return False, listed_name
+    return True, listed_name
+
+
 # Fases permitidas para creación manual desde el panel administrador.
 # IMPORTANTE: las fases eliminatorias ya no se crean automáticamente.
 MANUAL_PHASES = [
@@ -1219,6 +1270,15 @@ def register():
         if not is_valid_full_name(full_name):
             flash('El nombre solo debe contener letras y espacios. No uses números ni símbolos.', 'danger')
             return render_template('register.html', registration_closed=not registrations_open())
+        authorized_ok, listed_name = is_authorized_participant(full_name, email)
+        if not authorized_ok:
+            if listed_name:
+                flash('El correo existe en la lista autorizada, pero el nombre no coincide. Escríbelo tal como aparece en la lista oficial.', 'danger')
+            else:
+                flash('No estás autorizado para inscribirte. El nombre y correo deben aparecer en la lista oficial.', 'danger')
+            return render_template('register.html', registration_closed=not registrations_open())
+        # Guarda el nombre oficial de la lista para evitar duplicados por variaciones de escritura.
+        full_name = listed_name
         if password != confirm:
             flash('Las contraseñas no coinciden.', 'danger')
             return render_template('register.html', registration_closed=not registrations_open())
