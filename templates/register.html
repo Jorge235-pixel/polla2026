@@ -9,13 +9,13 @@
         <span class="text-muted small">Registro de participantes</span>
       </div>
       <h3 class="mb-3">Formulario de inscripción</h3>
-      <p class="text-muted">Inscripciones abiertas hasta el {{ registration_close_text }}.</p>
+      <p class="text-muted">Inscripciones abiertas hasta el {{ registration_close_text }}. Solo podrán registrarse las personas cuyo nombre y correo aparezcan en la lista oficial autorizada.</p>
       {% if registration_closed %}
       <div class="alert alert-warning">Las inscripciones ya están cerradas.</div>
       {% endif %}
       <form method="post" enctype="multipart/form-data">
-        <div class="mb-3"><label class="form-label">Nombre completo</label><input type="text" name="full_name" class="form-control name-only" minlength="2" maxlength="80" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\'\- ]+" title="Solo letras y espacios. No uses números ni símbolos." required><div class="form-text">Solo letras y espacios. No números ni símbolos.</div></div>
-        <div class="mb-3"><label class="form-label">Correo</label><input type="email" name="email" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Nombre completo</label><input type="text" name="full_name" class="form-control name-only" minlength="2" maxlength="80" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\'\- ]+" title="Solo letras y espacios. No uses números ni símbolos." required><div class="form-text">Debe coincidir con el nombre autorizado de la lista oficial.</div></div>
+        <div class="mb-3"><label class="form-label">Correo corporativo</label><input type="email" name="email" class="form-control" required><div class="form-text">Usa el correo laboral que aparece en la lista oficial.</div></div>
         <div class="mb-3">
           <label class="form-label">Foto de perfil (opcional)</label>
           <div class="border rounded-4 p-3 bg-light">
