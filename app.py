@@ -6,6 +6,7 @@ import socket
 import re
 import random
 import shutil
+import unicodedata
 from datetime import datetime, timedelta
 from uuid import uuid4
 from collections import OrderedDict
