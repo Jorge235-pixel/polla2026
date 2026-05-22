@@ -33,7 +33,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'cambia-esta-clave-2026')
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = '/var/data/polla_mundial_2026.db'
-UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or os.path.join(BASE_DIR, 'static', 'uploads')
+UPLOAD_FOLDER = '/var/data/uploads'
 SEED_DB_PATH = os.path.join(BASE_DIR, 'polla_mundial_2026.db')
 SEED_UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -1252,7 +1252,9 @@ def index():
         available_dates=available_match_dates(),
         selected_date=selected_date,
     )
-
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
