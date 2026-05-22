@@ -31,7 +31,11 @@
         {% for row in rows %}
         <tr>
           <td>{{ row.position }}</td>
-          <td><div class="d-flex align-items-center gap-2">{% if row.photo %}<img src="{{ photo_url(row.photo) }}" alt="{{ row.full_name }}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid #d7deea;">{% else %}<span style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:#334155;">{{ row.full_name[0] }}</span>{% endif %}<span>{{ row.full_name }}</span></div></td>
+          <td><div class="d-flex align-items-center gap-2">{% if row.photo %}
+<img src="{{ photo_url(row.photo) }}"
+     alt="{{ row.full_name }}"
+     onerror="this.style.display='none';"
+     style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid #d7deea;">{% else %}<span style="width:40px;height:40px;border-radius:50%;background:#e2e8f0;display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:#334155;">{{ row.full_name[0] }}</span>{% endif %}<span>{{ row.full_name }}</span></div></td>
           <td>{{ row.points }}</td>
           <td>{{ row.exact }}</td>
           
