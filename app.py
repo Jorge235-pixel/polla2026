@@ -1252,9 +1252,7 @@ def index():
         available_dates=available_match_dates(),
         selected_date=selected_date,
     )
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
