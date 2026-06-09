@@ -1257,7 +1257,7 @@ def index():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if not registrations_open():
-        flash('Las inscripciones estuvieron habilitadas hasta el 08/06/2026 23:59.', 'warning')
+        flash('Las inscripciones estuvieron habilitadas hasta el 09/06/2026 23:59.', 'warning')
         return render_template('register.html', registration_closed=True)
 
     if request.method == 'POST':
